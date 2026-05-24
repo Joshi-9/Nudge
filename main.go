@@ -15,57 +15,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	<link rel="manifest" href="/manifest.json">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<script type="module">
-	import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-	import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-	const firebaseConfig = {
-		apiKey: "AIzaSyCkx84KA8KBzcU3JCrDc-4-LmdyKN6EIL0",
-		authDomain: "nudge-5d054.firebaseapp.com",
-		projectId: "nudge-5d054",
-		storageBucket: "nudge-5d054.firebasestorage.app",
-		messagingSenderId: "135553800102",
-		appId: "1:135553800102:web:164f023344c8af8da56167",
-		measurementId: "G-223C3TPMC0"
-	};
-
-	const app = initializeApp(firebaseConfig);
-	const messaging = getMessaging(app);
-
-	async function setupFirebasePush() {
-		try {
-			const permission = await Notification.requestPermission();
-
-			if (permission !== "granted") {
-				console.log("Notification permission not granted");
-				return;
-			}
-
-			const token = await getToken(messaging, {
-				vapidKey: "BAkJV6bK48sE7zAqA7LTxBH8GP9QO5RPEZy1YhWw1rIBCx-ShPJD_bNz4ryFfJD547Dxons8nHRc2oIrC6KMjPg"
-			});
-
-			console.log("Firebase Push Token:", token);
-			localStorage.setItem("firebasePushToken", token);
-
-		} catch (error) {
-			console.log("Firebase push error:", error);
-		}
-	}
-
-	setupFirebasePush();
-	
-	function sendNotification(title, body) {
-    if (Notification.permission === "granted") {
-        new Notification(title, {
-            body: body,
-            icon: "/icon.png"
-        })
-    }
-}
-
-
-</script>
 <body>
 	<div class="app">
 		<header>
@@ -408,6 +358,15 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		} catch (e) {}
 	}
 
+	window.sendNotification = function(title, body) {
+		if (Notification.permission === "granted") {
+			new Notification(title, {
+				body: body,
+				icon: "https://cdn-icons-png.flaticon.com/512/1827/1827392.png"
+			})
+		}
+	}
+
 	function saveReminders() {
 		localStorage.setItem("nudgeReminders", JSON.stringify(reminders))
 	}
@@ -633,10 +592,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		let message = r.category + " - " + r.task + " | " + (r.priority || "Normal")
 
 		if ("Notification" in window && Notification.permission === "granted") {
-			new Notification("NUDGE Reminder", {
-				body: message,
-				icon: "https://cdn-icons-png.flaticon.com/512/1827/1827392.png"
-			})
+			window.sendNotification("NUDGE Reminder", message)
 		} else {
 			alert(message)
 		}
@@ -660,6 +616,61 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	setInterval(checkReminders, 10000)
 </script>
 
+<script type="module">
+	import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+	import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+	const firebaseConfig = {
+		apiKey: "AIzaSyCkx84KA8KBzcU3JCrDc-4-LmdyKN6EIL0",
+		authDomain: "nudge-5d054.firebaseapp.com",
+		projectId: "nudge-5d054",
+		storageBucket: "nudge-5d054.firebasestorage.app",
+		messagingSenderId: "135553800102",
+		appId: "1:135553800102:web:164f023344c8af8da56167",
+		measurementId: "G-223C3TPMC0"
+	};
+
+	const app = initializeApp(firebaseConfig);
+	const messaging = getMessaging(app);
+
+	async function setupFirebasePush() {
+		try {
+			const permission = await Notification.requestPermission();
+
+			if (permission !== "granted") {
+				console.log("Notification permission not granted");
+				return;
+			}
+
+			const token = await getToken(messaging, {
+				vapidKey: "BAkJV6bK48sE7zAqA7LTxBH8GP9QO5RPEZy1YhWw1rIBCx-ShPJD_bNz4ryFfJD547Dxons8nHRc2oIrC6KMjPg"
+			});
+
+			console.log("Firebase Push Token:", token);
+			localStorage.setItem("firebasePushToken", token);
+
+		} catch (error) {
+			console.log("Firebase push error:", error);
+		}
+	}
+
+	setupFirebasePush();
+
+	onMessage(messaging, function(payload) {
+		console.log("Firebase message received:", payload);
+
+		let title = "Nudge Reminder";
+		let body = "You have a new reminder";
+
+		if (payload.notification) {
+			title = payload.notification.title || title;
+			body = payload.notification.body || body;
+		}
+
+		window.sendNotification(title, body);
+	});
+</script>
+
 </body>
 </html>
 	`)
@@ -680,6 +691,7 @@ func main() {
 	http.HandleFunc("/service-worker.js", serviceWorkerHandler)
 
 	fmt.Println("Server running on http://localhost:8080")
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
