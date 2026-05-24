@@ -1,45 +1,21 @@
-const CACHE_NAME = "nudge-cache-v1";
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-const FILES_TO_CACHE = [
-  "/",
-  "/manifest.json",
-  "/service-worker.js"
-];
-
-self.addEventListener("install", function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(FILES_TO_CACHE);
-    })
-  );
+firebase.initializeApp({
+  apiKey: "AIzaSyCkx84KA8KBzcU3JCrDc-4-LmdyKN6EIL0",
+  authDomain: "nudge-5d054.firebaseapp.com",
+  projectId: "nudge-5d054",
+  storageBucket: "nudge-5d054.firebasestorage.app",
+  messagingSenderId: "135553800102",
+  appId: "1:135553800102:web:164f023344c8af8da56167",
+  measurementId: "G-223C3TPMC0"
 });
 
-self.addEventListener("activate", function(event) {
-  event.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.map(function(key) {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
-  );
-});
+const messaging = firebase.messaging();
 
-self.addEventListener("fetch", function(event) {
-  event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request);
-    })
-  );
-});
-
-self.addEventListener("notificationclick", function(event) {
-  event.notification.close();
-
-  event.waitUntil(
-    clients.openWindow("/")
-  );
+messaging.onBackgroundMessage(function(payload) {
+  self.registration.showNotification(payload.notification.title, {
+    body: payload.notification.body,
+    icon: "https://cdn-icons-png.flaticon.com/512/1827/1827392.png"
+  });
 });
